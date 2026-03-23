@@ -1,6 +1,7 @@
 @echo off
 setlocal EnableDelayedExpansion
 title PHP + MySQL Portable Installer
+echo [INFO] Running installer from: %~f0
 
 :: ============================================================
 ::  CONFIG — change these if needed
@@ -37,6 +38,48 @@ if %errorLevel% NEQ 0 (
 )
 
 :: ============================================================
+::  CHECK VC++ RUNTIME (VCRUNTIME140_1.dll)
+:: ============================================================
+set VCRUNTIME_SYS32=0
+set VCRUNTIME_SYSWOW64=0
+if exist "%SystemRoot%\System32\VCRUNTIME140_1.dll" set VCRUNTIME_SYS32=1
+if exist "%SystemRoot%\SysWOW64\VCRUNTIME140_1.dll" set VCRUNTIME_SYSWOW64=1
+if "%VCRUNTIME_SYS32%"=="0" if "%VCRUNTIME_SYSWOW64%"=="0" (
+    echo.
+    echo [ERROR] Missing Microsoft Visual C++ Runtime (VCRUNTIME140_1.dll)
+    echo         MySQL cannot start without it.
+    echo.
+    echo [FIX] Install the latest Visual C++ Redistributable (2015-2022) and retry.
+    echo       x64: https://aka.ms/vs/17/release/vc_redist.x64.exe
+    echo       x86: https://aka.ms/vs/17/release/vc_redist.x86.exe
+    echo.
+    echo [DIAG] Windows architecture:
+    wmic os get osarchitecture 2>nul
+    echo [DIAG] Checking expected paths:
+    if exist "%SystemRoot%\System32\VCRUNTIME140_1.dll" (
+        echo   FOUND: %SystemRoot%\System32\VCRUNTIME140_1.dll
+    ) else (
+        echo   MISSING: %SystemRoot%\System32\VCRUNTIME140_1.dll
+    )
+    if exist "%SystemRoot%\SysWOW64\VCRUNTIME140_1.dll" (
+        echo   FOUND: %SystemRoot%\SysWOW64\VCRUNTIME140_1.dll
+    ) else (
+        echo   MISSING: %SystemRoot%\SysWOW64\VCRUNTIME140_1.dll
+    )
+    echo.
+    echo [TIP] If you just installed the redistributable, reboot Windows and try again.
+    echo.
+    choice /c YN /n /m "Do you want to continue anyway? (Y/N): "
+    if %errorLevel%==2 exit /b 1
+)
+if "%VCRUNTIME_SYSWOW64%"=="0" (
+    echo.
+    echo [WARN] 32-bit VC++ runtime not found in SysWOW64.
+    echo        If MySQL is 32-bit, install the x86 redistributable and reboot.
+    echo        Otherwise you can continue.
+)
+
+:: ============================================================
 ::  CHECK C: DRIVE EXISTS
 :: ============================================================
 if not exist "C:\" (
@@ -49,6 +92,26 @@ if not exist "C:\" (
     echo         Example: set INSTALL_DIR=D:\php-app
     pause
     exit /b 1
+)
+
+:: ============================================================
+::  COPY PACKAGE FROM USB (IF NOT RUNNING FROM C:)
+:: ============================================================
+set SOURCE_DRIVE=%~d0
+if /I not "%SOURCE_DRIVE%"=="C:" (
+    set STAGE_DIR=%INSTALL_DIR%\_package
+    echo.
+    echo [INFO] Detected source drive %SOURCE_DRIVE%. Copying package to C: ...
+    if not exist "%STAGE_DIR%" mkdir "%STAGE_DIR%" 2>nul
+    robocopy "%SCRIPT_DIR%" "%STAGE_DIR%" /E /NFL /NDL /NJH /NJS /NP >nul
+    if %errorLevel% GEQ 8 (
+        echo [ERROR] Failed to copy package to %STAGE_DIR%.
+        echo         Please check the USB drive and try again.
+        pause
+        exit /b 1
+    )
+    set SCRIPT_DIR=%STAGE_DIR%\
+    echo [OK] Package copied to %STAGE_DIR%.
 )
 
 :: ============================================================
@@ -89,15 +152,28 @@ if exist "%INSTALL_DIR%" (
 ::  ALREADY INSTALLED CHECK
 :: ============================================================
 if exist "%LOCK_FILE%" (
-    echo.
+    cls
+    echo ============================================================
+    echo   PHP + MySQL Portable Installer
+    echo ============================================================
+    echo(
     echo [INFO] PHP App is already installed at %INSTALL_DIR%
-    echo.
+    echo [INFO] Lock file: %LOCK_FILE%
+    echo(
+    echo [INFO] Installed components:
+    if exist "%APP_DIR%\" (echo   [OK] App folder: %APP_DIR%) else (echo   [MISSING] App folder: %APP_DIR%)
+    if exist "%PHP_DIR%\" (echo   [OK] PHP folder: %PHP_DIR%) else (echo   [MISSING] PHP folder: %PHP_DIR%)
+    if exist "%MYSQL_DIR%\" (echo   [OK] MySQL folder: %MYSQL_DIR%) else (echo   [MISSING] MySQL folder: %MYSQL_DIR%)
+    if exist "%MYSQL_DATA%\" (echo   [OK] MySQL data: %MYSQL_DATA%) else (echo   [MISSING] MySQL data: %MYSQL_DATA%)
+    if exist "%NSSM%" (echo   [OK] NSSM: %NSSM%) else (echo   [MISSING] NSSM: %NSSM%)
+    echo(
+    echo(
     echo What would you like to do?
     echo   [1] Start Server
     echo   [2] Stop Server
     echo   [3] Reinstall (clean install)
     echo   [4] Exit
-    echo.
+    echo(
     set /p CHOICE="Enter choice (1/2/3/4): "
 
     if "!CHOICE!"=="1" goto START_SERVER
@@ -143,7 +219,7 @@ echo [INFO] Installing to %INSTALL_DIR% ...
 echo.
 
 :: Create directories — warn if subfolders already exist
-echo [STEP 1/7] Creating directories...
+echo [STEP 1/8] Creating directories...
 mkdir "%INSTALL_DIR%" 2>nul
 
 for %%F in (app php mysql mysql-data) do (
@@ -155,7 +231,7 @@ for %%F in (app php mysql mysql-data) do (
 )
 
 :: Copy NSSM
-echo [STEP 2/7] Copying NSSM...
+echo [STEP 2/8] Copying NSSM...
 if not exist "%SCRIPT_DIR%nssm.exe" (
     echo [ERROR] nssm.exe not found in package. Expected: %SCRIPT_DIR%nssm.exe
     echo         Download from https://nssm.cc/download ^(~350KB^)
@@ -165,7 +241,7 @@ copy /Y "%SCRIPT_DIR%nssm.exe" "%NSSM%" >nul
 echo [OK] NSSM copied.
 
 :: Copy PHP
-echo [STEP 3/7] Copying PHP...
+echo [STEP 3/8] Copying PHP...
 if not exist "%SCRIPT_DIR%php\" (
     echo [ERROR] PHP folder not found in package. Expected: %SCRIPT_DIR%php\
     pause & exit /b 1
@@ -173,8 +249,27 @@ if not exist "%SCRIPT_DIR%php\" (
 xcopy /E /I /Y "%SCRIPT_DIR%php\*" "%PHP_DIR%\" >nul
 echo [OK] PHP copied.
 
+:: Configure PHP (enable mysqli / pdo_mysql)
+echo [STEP 4/8] Configuring PHP (mysqli)...
+if not exist "%PHP_DIR%\php.ini" (
+    copy /Y "%PHP_DIR%\php.ini-production" "%PHP_DIR%\php.ini" >nul
+)
+findstr /i /r "^extension_dir" "%PHP_DIR%\php.ini" >nul
+if %errorLevel% NEQ 0 (
+    echo extension_dir="ext" >> "%PHP_DIR%\php.ini"
+)
+findstr /i /r "^extension=mysqli" "%PHP_DIR%\php.ini" >nul
+if %errorLevel% NEQ 0 (
+    echo extension=mysqli >> "%PHP_DIR%\php.ini"
+)
+findstr /i /r "^extension=pdo_mysql" "%PHP_DIR%\php.ini" >nul
+if %errorLevel% NEQ 0 (
+    echo extension=pdo_mysql >> "%PHP_DIR%\php.ini"
+)
+echo [OK] PHP configured.
+
 :: Copy MySQL
-echo [STEP 4/7] Copying MySQL...
+echo [STEP 5/8] Copying MySQL...
 if not exist "%SCRIPT_DIR%mysql\" (
     echo [ERROR] MySQL folder not found in package. Expected: %SCRIPT_DIR%mysql\
     pause & exit /b 1
@@ -183,7 +278,7 @@ xcopy /E /I /Y "%SCRIPT_DIR%mysql\*" "%MYSQL_DIR%\" >nul
 echo [OK] MySQL copied.
 
 :: Copy Application
-echo [STEP 5/7] Copying application...
+echo [STEP 6/8] Copying application...
 if not exist "%SCRIPT_DIR%app\" (
     echo [ERROR] App folder not found in package. Expected: %SCRIPT_DIR%app\
     pause & exit /b 1
@@ -192,7 +287,7 @@ xcopy /E /I /Y "%SCRIPT_DIR%app\*" "%APP_DIR%\" >nul
 echo [OK] Application copied.
 
 :: Add to PATH
-echo [STEP 6/7] Adding PHP and MySQL to system PATH...
+echo [STEP 7/8] Adding PHP and MySQL to system PATH...
 call :ADD_TO_PATH "%PHP_DIR%"
 call :ADD_TO_PATH "%MYSQL_DIR%\bin"
 echo [OK] PATH updated.
@@ -227,7 +322,7 @@ echo [OK] MySQL service started.
 :: ============================================================
 ::  STEP 7/7 — Create database, user and set root password
 :: ============================================================
-echo [STEP 7/7] Setting up database, user and PHP service...
+echo [STEP 8/8] Setting up database, user and PHP service...
 
 :: Wait a moment for MySQL to fully start
 timeout /t 3 /nobreak >nul
