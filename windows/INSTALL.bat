@@ -169,16 +169,16 @@ if exist "%LOCK_FILE%" (
     echo(
     echo(
     echo What would you like to do?
-    echo   [1] Start Server
-    echo   [2] Stop Server
-    echo   [3] Reinstall (clean install)
-    echo   [4] Exit
+    echo(   [1] Reinstall (clean install)
+    echo(   [2] Start Server
+    echo(   [3] Stop Server
+    echo(   [4] Exit
     echo(
     set /p CHOICE="Enter choice (1/2/3/4): "
 
-    if "!CHOICE!"=="1" goto START_SERVER
-    if "!CHOICE!"=="2" goto STOP_SERVER
-    if "!CHOICE!"=="3" goto CLEAN_INSTALL
+    if "!CHOICE!"=="1" goto CLEAN_INSTALL
+    if "!CHOICE!"=="2" goto START_SERVER
+    if "!CHOICE!"=="3" goto STOP_SERVER
     if "!CHOICE!"=="4" goto END
     echo Invalid choice. Exiting.
     goto END
