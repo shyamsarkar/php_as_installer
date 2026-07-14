@@ -3,7 +3,7 @@
 // These credentials match what INSTALL.bat sets up automatically
 $host     = 'localhost';
 $username = 'appuser';   // DB_USER in INSTALL.bat
-$password = 'secret123'; // DB_PASS in INSTALL.bat
+$password = '123'; // DB_PASS in INSTALL.bat
 $database = 'myapp';     // DB_NAME in INSTALL.bat
 
 $conn = mysqli_connect($host, $username, $password, $database);
