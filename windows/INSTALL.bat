@@ -46,10 +46,10 @@ if exist "%SystemRoot%\System32\VCRUNTIME140_1.dll" set VCRUNTIME_SYS32=1
 if exist "%SystemRoot%\SysWOW64\VCRUNTIME140_1.dll" set VCRUNTIME_SYSWOW64=1
 if "%VCRUNTIME_SYS32%"=="0" if "%VCRUNTIME_SYSWOW64%"=="0" (
     echo.
-    echo [ERROR] Missing Microsoft Visual C++ Runtime (VCRUNTIME140_1.dll)
+    echo [ERROR] Missing Microsoft Visual C++ Runtime ^(VCRUNTIME140_1.dll^)
     echo         MySQL cannot start without it.
     echo.
-    echo [FIX] Install the latest Visual C++ Redistributable (2015-2022) and retry.
+    echo [FIX] Install the latest Visual C++ Redistributable ^(2015-2022^) and retry.
     echo       x64: https://aka.ms/vs/17/release/vc_redist.x64.exe
     echo       x86: https://aka.ms/vs/17/release/vc_redist.x86.exe
     echo.
@@ -69,7 +69,7 @@ if "%VCRUNTIME_SYS32%"=="0" if "%VCRUNTIME_SYSWOW64%"=="0" (
     echo.
     echo [TIP] If you just installed the redistributable, reboot Windows and try again.
     echo.
-    choice /c YN /n /m "Do you want to continue anyway? (Y/N): "
+    choice /c YN /n /m "Did you install it? (Y/N): "
     if %errorLevel%==2 exit /b 1
 )
 if "%VCRUNTIME_SYSWOW64%"=="0" (
@@ -169,7 +169,7 @@ if exist "%LOCK_FILE%" (
     echo(
     echo(
     echo What would you like to do?
-    echo(   [1] Reinstall (clean install)
+    echo(   [1] Reinstall ^(clean install^)
     echo(   [2] Start Server
     echo(   [3] Stop Server
     echo(   [4] Uninstall
